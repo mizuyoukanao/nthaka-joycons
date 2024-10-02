@@ -1,6 +1,6 @@
 # Nthaka
 
-Meta firmware for NX automation.
+Meta firmware for NX automation + joycon, procon emulation code (https://github.com/DavidPagels/retro-pico-switch)
 
 ## Overview
 
