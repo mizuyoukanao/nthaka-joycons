@@ -19,16 +19,43 @@
 static uint8_t hid_service_buffer[700];
 static uint8_t pnp_service_buffer[200];
 static const char hid_device_name[] = "Wireless Gamepad";
+static bd_addr_t remote_addr;
+
+void get_first_link_key(void){
+    //bd_addr_t  addr;
+    link_key_t link_key;
+    link_key_type_t type;
+    btstack_link_key_iterator_t it;
+    //const char * addr_str;
+
+    //int ok = 
+    gap_link_key_iterator_init(&it);
+    //if (!ok) {
+    //    printf("Link key iterator not implemented\n");
+    //    return;
+    //}
+    //printf("Stored First link key: \n");
+
+    //if (
+    gap_link_key_iterator_get_next(&it, remote_addr, link_key, &type);//){
+        //addr_str = bd_addr_to_str(addr);
+        //printf("%s - type %u, key: ", addr_str, (int) type);
+        //printf_hexdump(link_key, 16);
+        //strncpy(device_addr_string, addr_str, sizeof(device_addr_string) - 1);
+    //}
+    //printf(".\n");
+    gap_link_key_iterator_done(&it);
+}
 
 void SwitchBluetooth::init() {
   _switchReport.batteryConnection = 0x80;
-  bd_addr_t newAddr = {0x7c,
-                       0xbb,
-                       0x8a,
-                       0xff,
-                       0xff,
-                       0xff};
-  memcpy(_addr, newAddr, 6);
+  //bd_addr_t newAddr = {0x7c,
+  //                     0xbb,
+  //                     0x8a,
+  //                     0xff,
+  //                     0xff,
+  //                     0xff};
+  //memcpy(_addr, newAddr, 6);
   if (cyw43_arch_init()) {
     return;
   }
@@ -90,6 +117,8 @@ void SwitchBluetooth::init() {
   // HID Device
   hid_device_init(1, sizeof(switch_bt_report_descriptor),
                   switch_bt_report_descriptor);
+
+  get_first_link_key();
 }
 
 void packet_handler(SwitchBluetooth *inst, uint8_t packet_type,
@@ -99,6 +128,16 @@ void packet_handler(SwitchBluetooth *inst, uint8_t packet_type,
     return;
   }
   switch (packet[0]) {
+    case BTSTACK_EVENT_STATE:
+        if (btstack_event_state_get_state(packet) == HCI_STATE_WORKING){
+            uint16_t hidcidtemp;
+            status = hid_device_connect(remote_addr, &hidcidtemp);
+            if (status != ERROR_CODE_SUCCESS){
+                //printf("HID host connect failed, status 0x%02x.\n", status);
+            } else {
+                inst->setHidCid(hidcidtemp);
+            }
+        }
     case HCI_EVENT_HID_META:
       switch (hci_event_hid_meta_get_subevent_code(packet)) {
         case HID_SUBEVENT_CONNECTION_OPENED:
@@ -110,9 +149,18 @@ void packet_handler(SwitchBluetooth *inst, uint8_t packet_type,
           }
           inst->setHidCid(hid_subevent_connection_opened_get_hid_cid(packet));
           hid_device_request_can_send_now_event(inst->getHidCid());
+
           break;
         case HID_SUBEVENT_CONNECTION_CLOSED:
           inst->setHidCid(0);
+          uint16_t hidcidtemp;
+          get_first_link_key();
+          status = hid_device_connect(remote_addr, &hidcidtemp);
+          if (status != ERROR_CODE_SUCCESS){
+              //printf("HID host connect failed, status 0x%02x.\n", status);
+          } else {
+              inst->setHidCid(hidcidtemp);
+          }
           break;
         case HID_SUBEVENT_GET_PROTOCOL_RESPONSE:
           break;

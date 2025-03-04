@@ -53,7 +53,7 @@ class SwitchCommon {
   void set_nfc_ir_config();
   uint8_t _report[100] = {0x0};
   uint8_t _switchRequestReport[100] = {0x0};
-  uint8_t _addr[6] = {0x0};
+  uint8_t _addr[6] = {0x7c, 0xbb, 0x8a, 0xff, 0xff, 0xff};
   bool _vibration_enabled = false;
   uint8_t _vibration_report = 0x00;
   uint8_t _vibration_idx = 0x00;
